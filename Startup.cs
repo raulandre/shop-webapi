@@ -16,6 +16,7 @@ using Shop.Data;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Shop
 {
@@ -31,7 +32,12 @@ namespace Shop
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddCors();
+            services.AddResponseCompression(options =>
+            {
+                options.Providers.Add<GzipCompressionProvider>();
+                options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/json" });
+            });
             services.AddControllers();
 
             var key = Encoding.ASCII.GetBytes(Settings.Secret);
@@ -52,16 +58,15 @@ namespace Shop
                 };
             });
 
-            //services.AddDbContext<DataContext>(opt => opt.UseInMemoryDatabase("Database"));
-            services.AddDbContext<DataContext>(
+            services.AddDbContext<DataContext>(opt => opt.UseInMemoryDatabase("Database"));
+            /*services.AddDbContext<DataContext>(
                 opt => opt.UseSqlServer(
                     Configuration.GetConnectionString("connectionString")
-                    ));
-            services.AddScoped<DataContext, DataContext>();
+                    ));*/
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Shop", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Shop API", Version = "v1" });
             });
         }
 
@@ -72,13 +77,17 @@ namespace Shop
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Shop v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Shop API v1"));
             }
 
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
+            app.UseCors(x => x
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+            );
             app.UseAuthentication();
             app.UseAuthorization();
 
